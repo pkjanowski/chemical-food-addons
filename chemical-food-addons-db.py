@@ -9,19 +9,21 @@ soup = BeautifulSoup(response.text, 'html.parser')
 e_code = []
 e_name = []
 rows = []
+codes = []
 
 e_database = sqlite3.connect('e_database.db')
 
 cur = e_database.cursor()
 
-cur.executescript('''
-    DROP TABLE IF EXISTS E_TABLE;
+cur.execute("DROP TABLE IF EXISTS E_TABLE;")
+
+cur.executescript("""
     CREATE TABLE IF NOT EXISTS E_TABLE
     (ID INTEGER PRIMARY KEY ASC,
-    KOD TEXT NOT NULL,
-    NAZWA TEXT NOT NULL)''')
+    KOD varchar(10) NOT NULL,
+    NAZWA varchar(250) NOT NULL)""")
+e_database.commit()
 
-e_database.close()
 
 # sprawdzenie czy kod e istnieje -> jeśli tak to zwrotka z nazwa
 def check_e_code(user_e):
@@ -40,11 +42,12 @@ def check_e_name(user_e_name):
     if any(user_e_name in e for e in e_name):
         counter = 0
         for e in e_name:
-            if (user_e_name in e):
+            if user_e_name in e:
                 print(e_code[counter] + " " + e)
             counter = counter + 1
     else:
         print("Brak nazwy w bazie")
+
 
 # sprawdzenie poprawnosci wejscia
 def inputChoice():
@@ -55,6 +58,7 @@ def inputChoice():
         print("Brak takiej opcji w menu, wybierz właściwą opcję!")
         inputChoice()
 
+
 tables = soup.find_all("table", class_="wikitable sortable")
 for table in tables:
     rows.append(table.find_all('tr'))
@@ -63,40 +67,37 @@ e_database = sqlite3.connect("e_database.db")
 
 for row in rows:
     for setx in row:
-        if setx.find('td') != None:
-            e_code.append(setx.find_all('td')[0].text)
-            e_name.append(setx.find_all('td')[1].text)
-            cur.execute("INSERT INTO E_TABLE (KOD, NAZWA) VALUES (?,?);", (setx.find_all('td')[0].text, setx.find_all('td')[1].text))
+        if setx.find('td') is not None:
+            cur.execute("INSERT INTO E_TABLE VALUES (NULL,?,?);", (setx.find_all('td')[0].text, (setx.find_all('td')[1].text).lower()))
+            e_database.commit()
 
-# konwersja wszystkich elementów listy na małe litery
-e_name = [element.lower() for element in e_name];
-e_name
+cur.execute("SELECT KOD, NAZWA FROM E_TABLE")
 
-cur.execute("SELECT * FROM E_TABLE")
+codes = cur.fetchall()
 
-tests = cur.fetchall()
+e_database.close()
 
-for test in tests:
-    print (test['KOD'], test['NAZWA'])
+#rozbicie listy list na pojedyncze listy
+e_code, e_name = zip(*codes)
 
-# print("Ten program jest bazą dodatków chemicznych do żywności.\n"
-#       "Wybierz opcję \"Podaj e\" aby przeszkać bazę pod kątem numeru e, lub \"Podaj nazwę\" aby przeszukać pod kątem nazwy. \n"
-#       "Obie opcje przeszukją cząstkowo, tj. po wprowadzeniu \"e12\" program zwróci wszyskie e zaczynające się od \"e12\"")
-#
-# while True:
-#     print("\n(1) Podaj e")
-#     print("(2) Podaj nazwę")
-#     print("(3) Wyjdź")
-#
-#     choice = inputChoice()
-#
-#     if choice == 1:
-#         user_e = input("Podaj kod e: ").upper()
-#         check_e_code(user_e)
-#     elif choice == 2:
-#         user_e_name = input("Podaj nazwe e: ").lower()
-#         check_e_name(user_e_name)
-#     elif choice == 3:
-#         break;
-#
-# print("Koniec programu!")
+print("Ten program jest bazą dodatków chemicznych do żywności.\n"
+      "Wybierz opcję \"Podaj e\" aby przeszkać bazę pod kątem numeru e, lub \"Podaj nazwę\" aby przeszukać pod kątem nazwy. \n"
+      "Obie opcje przeszukją cząstkowo, tj. po wprowadzeniu \"e12\" program zwróci wszyskie e zaczynające się od \"e12\"")
+
+while True:
+    print("\n(1) Podaj e")
+    print("(2) Podaj nazwę")
+    print("(3) Wyjdź")
+
+    choice = inputChoice()
+
+    if choice == 1:
+        user_e = input("Podaj kod e: ").upper()
+        check_e_code(user_e)
+    elif choice == 2:
+        user_e_name = input("Podaj nazwe e: ").lower()
+        check_e_name(user_e_name)
+    elif choice == 3:
+        break;
+
+print("Koniec programu!")
